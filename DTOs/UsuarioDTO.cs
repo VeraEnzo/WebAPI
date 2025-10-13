@@ -14,5 +14,6 @@ namespace DTOs
         public string Email { get; set; }
         public string Contrasena { get; set; }
         public DateTime FechaAlta { get; set; }
+        public bool EsAdmin { get; set; }
     }
 }

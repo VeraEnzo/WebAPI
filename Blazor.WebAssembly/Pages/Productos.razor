@@ -1,0 +1,170 @@
+﻿@page "/productos"
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Lista de Productos</PageTitle>
+
+<h1>Lista de Productos</h1>
+
+@if (!AuthService.EstaAutenticado)
+{
+    <p>Debe iniciar sesión para ver los productos.</p>
+    <button class="btn btn-primary" @onclick="@(() => Navigation.NavigateTo("/login"))">Ir a Login</button>
+}
+else
+{
+    @if (AuthService.EsAdministrador)
+    {
+        <div class="mb-3">
+            <button class="btn btn-success" @onclick="AgregarProducto">Agregar</button>
+        </div>
+    }
+
+    @if (listaProductos == null)
+    {
+        <p><em>Cargando productos...</em></p>
+    }
+    else if (!listaProductos.Any())
+    {
+        <p><em>No hay productos disponibles.</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    @if (AuthService.EsAdministrador)
+                    {
+                        <th>Acciones</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var prod in listaProductos)
+                {
+                    <tr>
+                        <td>@prod.Id</td>
+                        <td>@prod.Nombre</td>
+                        <td>@prod.Descripcion</td>
+                        <td>@prod.Precio.ToString("C")</td>
+                        <td>@prod.Stock</td>
+                        @if (AuthService.EsAdministrador)
+                        {
+                            <td>
+                                <button class="btn btn-sm btn-primary" @onclick="() => ModificarProducto(prod)">Modificar</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => EliminarProducto(prod)">Eliminar</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger mt-3">
+            <strong>Error:</strong> @errorMessage
+        </div>
+    }
+
+    @if (mostrarConfirmacion)
+    {
+        <div class="modal" style="display: block; background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar eliminación</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p>¿Está seguro de eliminar el producto '@productoAEliminar?.Nombre'?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="CancelarEliminacion">Cancelar</button>
+                        <button class="btn btn-danger" @onclick="ConfirmarEliminacion">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<ProductoDTO>? listaProductos;
+    private string? errorMessage;
+    private bool mostrarConfirmacion = false;
+    private ProductoDTO? productoAEliminar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthService.EstaAutenticado)
+        {
+            await CargarProductos();
+        }
+    }
+
+    private async Task CargarProductos()
+    {
+        try
+        {
+            listaProductos = await Http.GetFromJsonAsync<List<ProductoDTO>>("productos");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al obtener productos: {ex.Message}";
+        }
+    }
+
+    private void AgregarProducto()
+    {
+        Navigation.NavigateTo("/productos/nuevo");
+    }
+
+    private void ModificarProducto(ProductoDTO producto)
+    {
+        Navigation.NavigateTo($"/productos/editar/{producto.Id}");
+    }
+
+    private void EliminarProducto(ProductoDTO producto)
+    {
+        productoAEliminar = producto;
+        mostrarConfirmacion = true;
+    }
+
+    private void CancelarEliminacion()
+    {
+        productoAEliminar = null;
+        mostrarConfirmacion = false;
+    }
+
+    private async Task ConfirmarEliminacion()
+    {
+        if (productoAEliminar != null)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"productos/{productoAEliminar.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    await CargarProductos();
+                    mostrarConfirmacion = false;
+                    productoAEliminar = null;
+                }
+                else
+                {
+                    errorMessage = "Error al eliminar el producto";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error: {ex.Message}";
+            }
+        }
+    }
+}

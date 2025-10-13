@@ -1,0 +1,80 @@
+﻿@page "/login"
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Login</PageTitle>
+
+<div style="max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px;">
+    <h3>Iniciar Sesión</h3>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div style="color: red; margin-bottom: 15px;">
+            @errorMessage
+        </div>
+    }
+
+    <div style="margin-bottom: 15px;">
+        <label>Email:</label>
+        <input type="text" @bind="email" class="form-control" />
+    </div>
+
+    <div style="margin-bottom: 15px;">
+        <label>Contraseña:</label>
+        <input type="password" @bind="contrasena" class="form-control" />
+    </div>
+
+    <div style="margin-bottom: 15px;">
+        <label>
+            <input type="checkbox" @bind="esAdministrador" />
+            Administrador
+        </label>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+        <button @onclick="Ingresar" class="btn btn-primary">Ingresar</button>
+        <button @onclick="IngresarComoInvitado" class="btn btn-secondary">Invitado</button>
+    </div>
+</div>
+
+@code {
+    private string email = "";
+    private string contrasena = "";
+    private bool esAdministrador = false;
+    private string? errorMessage;
+
+    private async Task Ingresar()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(contrasena))
+        {
+            errorMessage = "Por favor complete todos los campos";
+            return;
+        }
+
+        var success = await AuthService.Login(email, contrasena, esAdministrador);
+
+        if (success)
+        {
+            Navigation.NavigateTo("/productos");
+        }
+        else
+        {
+            if (esAdministrador)
+            {
+                errorMessage = "Email o contraseña incorrectos, o el usuario no tiene permisos de administrador";
+            }
+            else
+            {
+                errorMessage = "Email o contraseña incorrectos";
+            }
+        }
+    }
+
+    private void IngresarComoInvitado()
+    {
+        AuthService.LoginComoInvitado();
+        Navigation.NavigateTo("/productos");
+    }
+}

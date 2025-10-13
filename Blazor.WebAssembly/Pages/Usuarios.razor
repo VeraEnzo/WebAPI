@@ -1,0 +1,180 @@
+﻿@page "/usuarios"
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Lista de Usuarios</PageTitle>
+
+<h1>Lista de Usuarios</h1>
+
+@if (!AuthService.EsAdministrador)
+{
+    <div class="alert alert-danger">
+        No tiene permisos para ver esta página. Solo los administradores pueden acceder.
+    </div>
+    <button class="btn btn-secondary" @onclick="@(() => Navigation.NavigateTo("/productos"))">Volver a Productos</button>
+}
+else
+{
+    <div class="mb-3">
+        <button class="btn btn-success" @onclick="AgregarUsuario">Agregar Usuario</button>
+    </div>
+
+    @if (listaUsuarios == null)
+    {
+        <p><em>Cargando usuarios...</em></p>
+    }
+    else if (!listaUsuarios.Any())
+    {
+        <p><em>No hay usuarios disponibles.</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Email</th>
+                    <th>Fecha Alta</th>
+                    <th>Es Admin</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var usuario in listaUsuarios)
+                {
+                    <tr>
+                        <td>@usuario.Id</td>
+                        <td>@usuario.Nombre</td>
+                        <td>@usuario.Apellido</td>
+                        <td>@usuario.Email</td>
+                        <td>@usuario.FechaAlta.ToShortDateString()</td>
+                        <td>
+                            @if (usuario.EsAdmin)
+                            {
+                                <span class="badge bg-primary">Sí</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" @onclick="() => ModificarUsuario(usuario)">Modificar</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => EliminarUsuario(usuario)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger mt-3">
+            <strong>Error:</strong> @errorMessage
+        </div>
+    }
+
+    @if (mostrarConfirmacion)
+    {
+        <div class="modal" style="display: block; background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar eliminación</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p>¿Está seguro de eliminar el usuario '@usuarioAEliminar?.Nombre @usuarioAEliminar?.Apellido'?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="CancelarEliminacion">Cancelar</button>
+                        <button class="btn btn-danger" @onclick="ConfirmarEliminacion">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<UsuarioDTO>? listaUsuarios;
+    private string? errorMessage;
+    private bool mostrarConfirmacion = false;
+    private UsuarioDTO? usuarioAEliminar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthService.EsAdministrador)
+        {
+            await CargarUsuarios();
+        }
+    }
+
+    private async Task CargarUsuarios()
+    {
+        try
+        {
+            listaUsuarios = await Http.GetFromJsonAsync<List<UsuarioDTO>>("usuarios");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al obtener usuarios: {ex.Message}";
+        }
+    }
+
+    private void AgregarUsuario()
+    {
+        // Apunta a la nueva página unificada
+        Navigation.NavigateTo("/usuarios/nuevo");
+    }
+
+    private void ModificarUsuario(UsuarioDTO usuario)
+    {
+        // Apunta a la nueva página unificada
+        Navigation.NavigateTo($"/usuarios/editar/{usuario.Id}");
+    }
+
+    private void EliminarUsuario(UsuarioDTO usuario)
+    {
+        usuarioAEliminar = usuario;
+        mostrarConfirmacion = true;
+    }
+
+    private void CancelarEliminacion()
+    {
+        usuarioAEliminar = null;
+        mostrarConfirmacion = false;
+    }
+
+    private async Task ConfirmarEliminacion()
+    {
+        if (usuarioAEliminar != null)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"usuarios/{usuarioAEliminar.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    await CargarUsuarios(); // Recargar la lista
+                }
+                else
+                {
+                    errorMessage = "Error al eliminar el usuario.";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                // Ocultar el modal en cualquier caso
+                mostrarConfirmacion = false;
+                usuarioAEliminar = null;
+            }
+        }
+    }
+}

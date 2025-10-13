@@ -23,6 +23,7 @@ namespace WindowsForms
         {
             string email = emailTextBox.Text.Trim();
             string contrasena = contrasenaTextBox.Text.Trim();
+            bool requiereAdmin = adminCheckBox.Checked;
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(contrasena))
             {
@@ -36,9 +37,15 @@ namespace WindowsForms
 
                 if (usuario != null)
                 {
+                    if (requiereAdmin && !usuario.EsAdmin)
+                    {
+                        MessageBox.Show("El usuario no tiene permisos de administrador.", "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
                     MessageBox.Show($"Bienvenido, {usuario.Nombre}!", "Login exitoso", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    var formPrincipal = new ProductoLista();
+                    var formPrincipal = new ProductoLista(false, usuario.EsAdmin);
                     this.Hide();
                     formPrincipal.ShowDialog();
                     this.Close();
@@ -54,5 +61,12 @@ namespace WindowsForms
             }
         }
 
+        private void invitadoButton_Click(object sender, EventArgs e)
+        {
+            var formProductos = new ProductoLista(true); // true indica modo invitado
+            this.Hide();
+            formProductos.ShowDialog();
+            this.Close();
+        }
     }
 }

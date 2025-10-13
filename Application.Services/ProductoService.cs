@@ -1,6 +1,8 @@
-﻿using Domain.Model;
+﻿using Data; // Asegúrate de tener este 'using'
+using Domain.Model;
 using DTOs;
-using Data;
+using System.Collections.Generic; // Necesario para List<T>
+using System.Linq; // Necesario para .Select()
 
 namespace Application.Services
 {
@@ -8,32 +10,32 @@ namespace Application.Services
     {
         public ProductoDTO Add(ProductoDTO dto)
         {
-            if (ProductoInMemory.Productos.Any(p => p.Nombre.Equals(dto.Nombre, StringComparison.OrdinalIgnoreCase)))
+            var productoRepository = new ProductoRepository();
+
+            if (productoRepository.NombreExists(dto.Nombre))
             {
                 throw new ArgumentException($"Ya existe un producto con el nombre '{dto.Nombre}'.");
             }
 
-            int nuevoId = GetNextId();
+            var producto = new Producto(0, dto.Nombre, dto.Descripcion, dto.Precio, dto.Stock, dto.CategoriaId, dto.ProveedorId);
 
-            var producto = new Producto(
-                nuevoId,
-                dto.Nombre,
-                dto.Descripcion,
-                dto.Precio,
-                dto.Stock,
-                dto.CategoriaId,
-                dto.ProveedorId
-            );
+            productoRepository.Add(producto);
 
-            ProductoInMemory.Productos.Add(producto);
-
+            // La base de datos asigna el ID al objeto 'producto' después de guardarlo.
             dto.Id = producto.Id;
             return dto;
         }
 
         public List<ProductoDTO> GetAll()
         {
-            return ProductoInMemory.Productos.Select(p => new ProductoDTO
+            // --- CORREGIDO ---
+            // 1. Se crea una instancia del repositorio.
+            var productoRepository = new ProductoRepository();
+            // 2. Se llama al método GetAll() de la instancia.
+            var productos = productoRepository.GetAll();
+
+            // 3. Se mapean los objetos de dominio a DTOs para devolverlos.
+            return productos.Select(p => new ProductoDTO
             {
                 Id = p.Id,
                 Nombre = p.Nombre,
@@ -45,11 +47,15 @@ namespace Application.Services
             }).ToList();
         }
 
-        public ProductoDTO Get(int id)
+        public ProductoDTO? Get(int id)
         {
-            var p = ProductoInMemory.Productos.Find(p => p.Id == id);
+            // --- CORREGIDO ---
+            var productoRepository = new ProductoRepository();
+            var p = productoRepository.Get(id); // Se llama al método Get(id) de la instancia.
+
             if (p == null) return null;
 
+            // Se mapea el objeto de dominio a un DTO.
             return new ProductoDTO
             {
                 Id = p.Id,
@@ -64,38 +70,43 @@ namespace Application.Services
 
         public bool Update(ProductoDTO dto)
         {
-            var p = ProductoInMemory.Productos.Find(p => p.Id == dto.Id);
-            if (p == null) return false;
+            // --- CORREGIDO ---
+            var productoRepository = new ProductoRepository();
 
-            if (ProductoInMemory.Productos.Any(prod => prod.Id != dto.Id && prod.Nombre.Equals(dto.Nombre, StringComparison.OrdinalIgnoreCase)))
+            // La validación ahora excluye el ID del producto que se está editando.
+            if (productoRepository.NombreExists(dto.Nombre, dto.Id))
             {
                 throw new ArgumentException($"Ya existe otro producto con el nombre '{dto.Nombre}'.");
             }
 
-            p.SetNombre(dto.Nombre);
-            p.SetDescripcion(dto.Descripcion);
-            p.SetPrecio(dto.Precio);
-            p.SetStock(dto.Stock);
-            p.CambiarCategoria(dto.CategoriaId);
-            p.CambiarProveedor(dto.ProveedorId);
+            // Para actualizar, primero obtenemos la entidad de la base de datos.
+            var producto = productoRepository.Get(dto.Id);
+            if (producto == null)
+            {
+                return false; // No se puede actualizar un producto que no existe.
+            }
 
-            return true;
+            // Usamos los métodos del objeto de dominio para actualizar sus propiedades.
+            producto.SetNombre(dto.Nombre);
+            producto.SetDescripcion(dto.Descripcion);
+            producto.SetPrecio(dto.Precio);
+            producto.SetStock(dto.Stock);
+            producto.CambiarCategoria(dto.CategoriaId);
+            producto.CambiarProveedor(dto.ProveedorId);
+
+            // Llamamos al método Update del repositorio.
+            return productoRepository.Update(producto);
         }
 
         public bool Delete(int id)
         {
-            var p = ProductoInMemory.Productos.Find(p => p.Id == id);
-            if (p == null) return false;
-
-            ProductoInMemory.Productos.Remove(p);
-            return true;
+            // --- CORREGIDO ---
+            var productoRepository = new ProductoRepository();
+            // Simplemente llamamos al método Delete del repositorio.
+            return productoRepository.Delete(id);
         }
 
-        private static int GetNextId()
-        {
-            return ProductoInMemory.Productos.Count > 0
-                ? ProductoInMemory.Productos.Max(p => p.Id) + 1
-                : 1;
-        }
+        // El método GetNextId() se elimina porque la base de datos
+        // se encarga de generar los IDs automáticamente.
     }
 }

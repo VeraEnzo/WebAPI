@@ -6,14 +6,33 @@ namespace WindowsForms
 {
     public partial class ProductoLista : Form
     {
-        public ProductoLista()
+        private bool esInvitado;
+        private bool esAdmin;
+        public ProductoLista(bool invitado = false, bool admin = false)
         {
             InitializeComponent();
+            esInvitado = invitado;
+            esAdmin = admin;
         }
 
         private void ProductoLista_Load(object sender, EventArgs e)
         {
             this.GetAllAndLoad();
+
+            if (esInvitado)
+            {
+                agregarButton.Visible = false;
+                modificarButton.Visible = false;
+                eliminarButton.Visible = false;
+            }
+            else if (esAdmin)
+            {
+                usuariosButton.Visible = true;
+            }
+            else
+            {
+                usuariosButton.Visible = false;
+            }
         }
 
         private void agregarButton_Click(object sender, EventArgs e)
@@ -108,5 +127,10 @@ namespace WindowsForms
             return cliente;
         }
 
+        private void usuariosButton_Click(object sender, EventArgs e)
+        {
+            var usuarioListaForm = new UsuarioLista();
+            usuarioListaForm.ShowDialog();
+        }
     }
 }

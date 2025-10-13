@@ -1,0 +1,68 @@
+﻿@inherits LayoutComponentBase
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="page">
+    <div class="sidebar">
+        <div class="top-row">
+            <h3>Menú</h3>
+        </div>
+
+        <nav class="nav flex-column">
+            @if (AuthService.EstaAutenticado)
+            {
+                <a class="nav-link" href="/productos">Productos</a>
+
+                @if (AuthService.EsAdministrador)
+                {
+                    <a class="nav-link" href="/usuarios">Usuarios</a>
+                }
+
+                <button class="btn btn-link nav-link" @onclick="Logout">Cerrar Sesión</button>
+            }
+            else
+            {
+                <a class="nav-link" href="/login">Login</a>
+            }
+        </nav>
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            @if (AuthService.EstaAutenticado)
+            {
+                <span>Usuario: @(AuthService.UsuarioActual?.Email ?? "Invitado")</span>
+                @if (AuthService.EsAdministrador)
+                {
+                    <span class="badge bg-primary ms-2">Admin</span>
+                }
+                else if (AuthService.EsInvitado)
+                {
+                    <span class="badge bg-secondary ms-2">Invitado</span>
+                }
+            }
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AuthService.OnAuthStateChanged += StateHasChanged;
+    }
+
+    private void Logout()
+    {
+        AuthService.Logout();
+        Navigation.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= StateHasChanged;
+    }
+}

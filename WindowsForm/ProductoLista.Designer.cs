@@ -32,6 +32,7 @@
             modificarButton = new Button();
             eliminarButton = new Button();
             agregarButton = new Button();
+            usuariosButton = new Button();
             ((System.ComponentModel.ISupportInitialize)productosDataGridView).BeginInit();
             SuspendLayout();
             // 
@@ -81,11 +82,23 @@
             agregarButton.UseVisualStyleBackColor = true;
             agregarButton.Click += agregarButton_Click;
             // 
+            // usuariosButton
+            // 
+            usuariosButton.Location = new Point(426, 343);
+            usuariosButton.Margin = new Padding(2, 1, 2, 1);
+            usuariosButton.Name = "usuariosButton";
+            usuariosButton.Size = new Size(81, 22);
+            usuariosButton.TabIndex = 7;
+            usuariosButton.Text = "Usuarios";
+            usuariosButton.UseVisualStyleBackColor = true;
+            usuariosButton.Click += usuariosButton_Click;
+            // 
             // ProductoLista
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(usuariosButton);
             Controls.Add(modificarButton);
             Controls.Add(eliminarButton);
             Controls.Add(agregarButton);
@@ -103,5 +116,6 @@
         private Button modificarButton;
         private Button eliminarButton;
         private Button agregarButton;
+        private Button usuariosButton;
     }
 }

@@ -65,5 +65,8 @@ namespace Domain.Model
         {
             ProveedorId = proveedorId;
         }
+
+        // Constructor privado para Entity Framework Core
+        private Producto() { }
     }
 }

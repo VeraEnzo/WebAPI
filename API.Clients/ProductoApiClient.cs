@@ -18,7 +18,7 @@ namespace API.Clients
             handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
 
             client = new HttpClient(handler);
-            client.BaseAddress = new Uri("https://localhost:7153"); // cambiá por la URL real de tu API
+            client.BaseAddress = new Uri("https://localhost:7153");
         }
 
         public static async Task<ProductoDTO> GetAsync(int id)

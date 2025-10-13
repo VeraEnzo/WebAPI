@@ -15,8 +15,9 @@ namespace Domain.Model
         public string Email { get; private set; }
         public string Contrasena { get; private set; }
         public DateTime FechaAlta { get; private set; }
+        public bool EsAdmin { get; private set; }
 
-        public Usuario(int id, string nombre, string apellido, string email, string contrasena, DateTime fechaAlta)
+        public Usuario(int id, string nombre, string apellido, string email, string contrasena, DateTime fechaAlta, bool esAdmin)
         {
             SetId(id);
             SetNombre(nombre);
@@ -24,6 +25,7 @@ namespace Domain.Model
             SetEmail(email);
             SetContrasena(contrasena);
             SetFechaAlta(fechaAlta);
+            SetEsAdmin(esAdmin);
         }
 
         public void SetId(int id)
@@ -71,6 +73,11 @@ namespace Domain.Model
         public void SetFechaAlta(DateTime fechaAlta)
         {
             FechaAlta = fechaAlta;
+        }
+
+        public void SetEsAdmin(bool esAdmin)
+        {
+            EsAdmin = esAdmin;
         }
     }
 }
