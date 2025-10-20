@@ -1,0 +1,62 @@
+﻿@page "/pedidos/{Id:int}"
+@attribute [Authorize]
+@inject HttpClient Http
+
+<PageTitle>Detalle del Pedido</PageTitle>
+
+<h3>Detalle del Pedido #@Id</h3>
+
+@if (detalles == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th class="text-end">Precio Unitario</th>
+                <th class="text-end">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in detalles)
+            {
+                <tr>
+                    <td>@item.NombreProducto</td>
+                    <td>@item.Cantidad</td>
+                    <td class="text-end">@item.PrecioUnitario.ToString("C")</td>
+                    <td class="text-end">@item.Subtotal.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                <td class="text-end"><strong>@detalles.Sum(d => d.Subtotal).ToString("C")</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+}
+<button class="btn btn-secondary" @onclick='() => Navigation.NavigateTo("/pedidos")'>Volver a Pedidos</button>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    private List<PedidoDetalleItemDTO>? detalles;
+    @inject NavigationManager Navigation
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            detalles = await Http.GetFromJsonAsync<List<PedidoDetalleItemDTO>>($"pedidos/{Id}");
+        }
+        catch (Exception)
+        {
+            // Manejar error (ej. redirigir si no tiene permiso)
+        }
+    }
+}

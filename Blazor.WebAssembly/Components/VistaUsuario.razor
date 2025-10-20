@@ -1,0 +1,65 @@
+﻿@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h4>Mis Pedidos</h4>
+
+@if (pedidos == null)
+{
+    <p><em>Cargando tus pedidos...</em></p>
+}
+else if (!pedidos.Any())
+{
+    <p>Aún no has realizado ningún pedido.</p>
+}
+else
+{
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>N° de Pedido</th>
+                <th>Fecha</th>
+                <th>Items</th>
+                <th class="text-end">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var pedido in pedidos)
+            {
+                <tr @onclick="() => VerDetalle(pedido.Id)" style="cursor:pointer">
+                    <td>#@pedido.Id</td>
+                    <td>@pedido.FechaPedido.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                    <td>@pedido.CantidadItems</td>
+                    <td class="text-end">@pedido.Total.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@code {
+    private List<PedidoResumenDTO>? pedidos;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Llama al endpoint seguro que solo devuelve los pedidos del usuario logueado
+            pedidos = await Http.GetFromJsonAsync<List<PedidoResumenDTO>>("pedidos/mis-pedidos");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar tus pedidos: {ex.Message}";
+        }
+    }
+
+    private void VerDetalle(int pedidoId)
+    {
+        Navigation.NavigateTo($"/pedidos/{pedidoId}");
+    }
+}

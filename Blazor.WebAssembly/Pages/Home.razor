@@ -1,9 +1,35 @@
 ﻿@page "/"
-@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Home</PageTitle>
+
+@if (loginSuccess)
+{
+    <div class="alert alert-success" role="alert">
+        ¡Inicio de sesión exitoso!
+    </div>
+}
+
+<AuthorizeView>
+    <Authorized>
+        <h1>Bienvenido, @context.User.Identity?.Name</h1>
+        <p>Selecciona una opción del menú para comenzar.</p>
+        <div class="mt-3">
+            <a href="/productos" class="btn btn-primary">Ver Productos</a>
+            @if (context.User.IsInRole("Admin"))
+            {
+                <a href="/usuarios" class="btn btn-primary ms-2">Ver Usuarios</a>
+                <a href="/pedidos" class="btn btn-primary ms-2">Ver Pedidos</a>
+            }
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <h1>Bienvenido</h1>
+        <p>Por favor <a href="/login">inicia sesión</a> para continuar.</p>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
-    protected override void OnInitialized()
-    {
-        Navigation.NavigateTo("/login");
-    }
+    [SupplyParameterFromQuery]
+    public bool loginSuccess { get; set; }
 }

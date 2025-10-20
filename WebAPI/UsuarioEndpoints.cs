@@ -1,5 +1,6 @@
 ﻿using Application.Services;
 using DTOs;
+using Microsoft.Extensions.Configuration;
 
 namespace WebAPI
 {
@@ -7,26 +8,52 @@ namespace WebAPI
     {
         public static void MapUsuarioEndpoints(this WebApplication app)
         {
-            // ---------- ENDPOINT LOGIN ----------
-            // Se inyecta 'usuarioService' como parámetro.
-            app.MapPost("/usuarios/login", (UsuarioLoginDTO loginDTO, UsuarioService usuarioService) =>
+            // ---------- ENDPOINT LOGIN (Público) ----------
+            app.MapPost("/usuarios/login", (UsuarioLoginDTO loginDTO, UsuarioService usuarioService, IConfiguration configuration) =>
             {
-                var usuario = usuarioService.Validar(loginDTO.Email, loginDTO.Contrasena);
-
-                if (usuario == null)
+                var token = usuarioService.ValidarYGenerarToken(loginDTO.Email, loginDTO.Contrasena, configuration);
+                if (token == null)
+                {
                     return Results.Unauthorized();
-
-                return Results.Ok(usuario);
+                }
+                return Results.Ok(new { Token = token });
             })
             .WithName("LoginUsuario")
-            .Produces<UsuarioDTO>(StatusCodes.Status200OK)
+            .Produces<object>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .WithOpenApi();
 
+            // ---------- ENDPOINT REGISTRO PÚBLICO ----------
+            app.MapPost("/usuarios/registro", (UsuarioDTO dto, UsuarioService usuarioService) =>
+            {
+                try
+                {
+                    // Forzamos que el nuevo usuario NO sea administrador por seguridad.
+                    dto.EsAdmin = false;
 
-            // ---------- ENDPOINTS CRUD DE USUARIOS ----------
+                    var result = usuarioService.Add(dto);
+                    // Devolvemos el usuario creado sin la contraseña.
+                    result.Contrasena = "";
+                    return Results.Created($"/usuarios/{result.Id}", result);
+                }
+                catch (ArgumentException ex)
+                {
+                    // Esto se dispara si el email ya existe.
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+                catch (Exception)
+                {
+                    // Error genérico por si algo más falla.
+                    return Results.StatusCode(500);
+                }
+            })
+            .WithName("RegistrarUsuario")
+            .Produces<UsuarioDTO>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .WithOpenApi(); // No lleva .RequireAuthorization() porque es público.
 
-            // GET para obtener todos los usuarios
+            // ---------- ENDPOINTS CRUD DE USUARIOS (Protegidos) ----------
+
             app.MapGet("/usuarios", (UsuarioService usuarioService) =>
             {
                 var usuarios = usuarioService.GetAll();
@@ -34,24 +61,20 @@ namespace WebAPI
             })
             .WithName("GetAllUsuarios")
             .Produces<List<UsuarioDTO>>(StatusCodes.Status200OK)
-            .WithOpenApi();
+            .WithOpenApi()
+            .RequireAuthorization("Admin"); // <-- Protegido con política "Admin"
 
-            // GET para obtener un usuario por ID
             app.MapGet("/usuarios/{id}", (int id, UsuarioService usuarioService) =>
             {
                 var usuario = usuarioService.Get(id);
-
-                if (usuario == null)
-                    return Results.NotFound();
-
-                return Results.Ok(usuario);
+                return usuario != null ? Results.Ok(usuario) : Results.NotFound();
             })
             .WithName("GetUsuarioById")
             .Produces<UsuarioDTO>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound)
-            .WithOpenApi();
+            .WithOpenApi()
+            .RequireAuthorization("Admin"); // <-- Protegido
 
-            // POST para crear un nuevo usuario
             app.MapPost("/usuarios", (UsuarioDTO dto, UsuarioService usuarioService) =>
             {
                 try
@@ -67,19 +90,15 @@ namespace WebAPI
             .WithName("AddUsuario")
             .Produces<UsuarioDTO>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
-            .WithOpenApi();
+            .WithOpenApi()
+            .RequireAuthorization("Admin"); // <-- Protegido
 
-            // PUT para actualizar un usuario existente
             app.MapPut("/usuarios", (UsuarioDTO dto, UsuarioService usuarioService) =>
             {
                 try
                 {
                     bool updated = usuarioService.Update(dto);
-
-                    if (!updated)
-                        return Results.NotFound();
-
-                    return Results.NoContent();
+                    return updated ? Results.NoContent() : Results.NotFound();
                 }
                 catch (ArgumentException ex)
                 {
@@ -90,22 +109,19 @@ namespace WebAPI
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status400BadRequest)
-            .WithOpenApi();
+            .WithOpenApi()
+            .RequireAuthorization("Admin"); // <-- Protegido
 
-            // DELETE para eliminar un usuario
             app.MapDelete("/usuarios/{id}", (int id, UsuarioService usuarioService) =>
             {
                 bool deleted = usuarioService.Delete(id);
-
-                if (!deleted)
-                    return Results.NotFound();
-
-                return Results.NoContent();
+                return deleted ? Results.NoContent() : Results.NotFound();
             })
             .WithName("DeleteUsuario")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
-            .WithOpenApi();
+            .WithOpenApi()
+            .RequireAuthorization("Admin"); // <-- Protegido
         }
     }
 }

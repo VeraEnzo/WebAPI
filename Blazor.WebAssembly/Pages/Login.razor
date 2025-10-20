@@ -1,6 +1,7 @@
 ﻿@page "/login"
-@inject AuthService AuthService
+@inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Login</PageTitle>
 
@@ -9,38 +10,31 @@
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div style="color: red; margin-bottom: 15px;">
+        <div class="alert alert-danger mt-3">
             @errorMessage
         </div>
     }
 
-    <div style="margin-bottom: 15px;">
-        <label>Email:</label>
-        <input type="text" @bind="email" class="form-control" />
+    <div class="mb-3">
+        <label for="email" class="form-label">Email:</label>
+        <input id="email" type="email" @bind="email" class="form-control" />
     </div>
 
-    <div style="margin-bottom: 15px;">
-        <label>Contraseña:</label>
-        <input type="password" @bind="contrasena" class="form-control" />
+    <div class="mb-3">
+        <label for="password" class="form-label">Contraseña:</label>
+        <input id="password" type="password" @bind="contrasena" class="form-control" />
     </div>
 
-    <div style="margin-bottom: 15px;">
-        <label>
-            <input type="checkbox" @bind="esAdministrador" />
-            Administrador
-        </label>
-    </div>
-
-    <div style="display: flex; gap: 10px;">
+    <div class="d-flex align-items-center">
         <button @onclick="Ingresar" class="btn btn-primary">Ingresar</button>
-        <button @onclick="IngresarComoInvitado" class="btn btn-secondary">Invitado</button>
+
+        <a href="/registro" class="btn btn-link ms-auto">No tengo cuenta, registrarme</a>
     </div>
 </div>
 
 @code {
     private string email = "";
     private string contrasena = "";
-    private bool esAdministrador = false;
     private string? errorMessage;
 
     private async Task Ingresar()
@@ -49,32 +43,27 @@
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(contrasena))
         {
-            errorMessage = "Por favor complete todos los campos";
+            errorMessage = "Por favor, complete todos los campos.";
             return;
         }
 
-        var success = await AuthService.Login(email, contrasena, esAdministrador);
+        try
+        {
+            var success = await AuthService.LoginAsync(email, contrasena);
 
-        if (success)
-        {
-            Navigation.NavigateTo("/productos");
-        }
-        else
-        {
-            if (esAdministrador)
+            if (success)
             {
-                errorMessage = "Email o contraseña incorrectos, o el usuario no tiene permisos de administrador";
+                // Añadimos "?loginSuccess=true" a la URL para avisarle a la página Home
+                Navigation.NavigateTo("/?loginSuccess=true", forceLoad: true);
             }
             else
             {
-                errorMessage = "Email o contraseña incorrectos";
+                errorMessage = "Email o contraseña incorrectos.";
             }
         }
-    }
-
-    private void IngresarComoInvitado()
-    {
-        AuthService.LoginComoInvitado();
-        Navigation.NavigateTo("/productos");
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al conectar con el servidor: {ex.Message}";
+        }
     }
 }

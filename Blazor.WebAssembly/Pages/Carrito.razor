@@ -1,0 +1,186 @@
+﻿@page "/carrito"
+@attribute [Authorize]
+@implements IDisposable
+@inject CarritoService CarritoService
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Mi Carrito de Compras</PageTitle>
+
+<h1>Mi Carrito de Compras</h1>
+
+@if (pedidoRealizado)
+{
+    // --- ESTE BLOQUE AHORA TIENE PRIORIDAD ---
+    <div class="alert alert-success">
+        ¡Pedido creado correctamente! Gracias por tu compra.
+        <button class="btn btn-primary ms-3" @onclick='() => Navigation.NavigateTo("/productos")'>Seguir comprando</button>
+    </div>
+}
+else if (carritoItemsConDetalles == null)
+{
+    <p><em>Cargando carrito...</em></p>
+}
+else if (!carritoItemsConDetalles.Any())
+{
+    <div class="alert alert-info">
+        Tu carrito está vacío. <a href="/productos">¡Explorá nuestros productos!</a>
+    </div>
+}
+else
+{
+    // Si el pedido no se ha realizado y el carrito tiene items, mostramos la tabla
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th class="text-end">Precio Unitario</th>
+                <th class="text-center">Cantidad</th>
+                <th class="text-end">Subtotal</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in carritoItemsConDetalles)
+            {
+                <tr>
+                    <td>@item.NombreProducto</td>
+                    <td class="text-end">@item.PrecioUnitario.ToString("C")</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-secondary" @onclick="() => CarritoService.DisminuirCantidad(item.ProductoId)">-</button>
+                        <span class="mx-2">@item.Cantidad</span>
+                        <button class="btn btn-sm btn-secondary" @onclick="() => CarritoService.AumentarCantidad(item.ProductoId)">+</button>
+                    </td>
+                    <td class="text-end">@((item.PrecioUnitario * item.Cantidad).ToString("C"))</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" @onclick="() => CarritoService.RemoverDelCarrito(item.ProductoId)">
+                            <span class="bi bi-trash"></span>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                <td class="text-end"><strong>@totalCarrito.ToString("C")</strong></td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="text-end">
+        <button class="btn btn-success" @onclick="FinalizarPedido" disabled="@isSubmitting">Finalizar Pedido</button>
+    </div>
+}
+
+@code {
+    // --- (Tu bloque @code se queda exactamente igual) ---
+    private List<CarritoItemDetalle>? carritoItemsConDetalles;
+    private decimal totalCarrito = 0;
+    private string? errorMessage;
+    private bool isSubmitting = false;
+    private bool pedidoRealizado = false;
+
+    public class CarritoItemDetalle
+    {
+        public int ProductoId { get; set; }
+        public string NombreProducto { get; set; } = "";
+        public decimal PrecioUnitario { get; set; }
+        public int Cantidad { get; set; }
+    }
+
+    private async void OnCarritoChanged()
+    {
+        await CargarDetallesCarrito();
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        CarritoService.OnChange += OnCarritoChanged;
+        await CargarDetallesCarrito();
+    }
+
+    private async Task CargarDetallesCarrito()
+    {
+        errorMessage = null;
+        try
+        {
+            var itemsEnCarrito = CarritoService.Items;
+            if (!itemsEnCarrito.Any())
+            {
+                carritoItemsConDetalles = new List<CarritoItemDetalle>();
+                totalCarrito = 0;
+                // No llamamos a StateHasChanged aquí para evitar el problema de la carrera
+                return;
+            }
+
+            var todosLosProductos = await Http.GetFromJsonAsync<List<ProductoDTO>>("productos");
+
+            if (todosLosProductos != null)
+            {
+                carritoItemsConDetalles = (from item in itemsEnCarrito
+                                           join prod in todosLosProductos on item.ProductoId equals prod.Id
+                                           select new CarritoItemDetalle
+                                           {
+                                               ProductoId = item.ProductoId,
+                                               NombreProducto = prod.Nombre,
+                                               PrecioUnitario = prod.Precio,
+                                               Cantidad = item.Cantidad
+                                           }).ToList();
+
+                totalCarrito = carritoItemsConDetalles.Sum(item => item.Cantidad * item.PrecioUnitario);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar el carrito: {ex.Message}";
+        }
+    }
+
+    private async Task FinalizarPedido()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var pedidoDto = new PedidoDTO
+            {
+                Detalles = CarritoService.Items
+            };
+
+            var response = await Http.PostAsJsonAsync("pedidos", pedidoDto);
+
+            if (response.IsSuccessStatusCode)
+            {
+                pedidoRealizado = true; // Primero marcamos como realizado
+                CarritoService.LimpiarCarrito(); // Luego limpiamos (esto disparará el evento OnChange)
+            }
+            else
+            {
+                var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                errorMessage = error?["error"] ?? "Ocurrió un error al procesar el pedido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error de conexión al finalizar el pedido: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        CarritoService.OnChange -= OnCarritoChanged;
+    }
+}

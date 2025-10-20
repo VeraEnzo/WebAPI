@@ -1,0 +1,25 @@
+﻿@page "/pedidos"
+@attribute [Authorize]
+@inject HttpClient Http
+
+<PageTitle>Mis Pedidos</PageTitle>
+
+<h1>Historial de Pedidos</h1>
+
+<AuthorizeView>
+    <Authorized>
+        @if (context.User.IsInRole("Admin"))
+        {
+            <VistaAdmin />
+        }
+        else
+        {
+            <VistaUsuario />
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    // Esta página ahora solo actúa como un contenedor que decide qué vista mostrar.
+    // La lógica estará en los componentes de abajo.
+}

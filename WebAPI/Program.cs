@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Application.Services;
 using WebAPI;
 
@@ -9,6 +12,7 @@ builder.Services.AddHttpLogging(o => { });
 
 builder.Services.AddScoped<ProductoService>();
 builder.Services.AddScoped<UsuarioService>();
+builder.Services.AddScoped<PedidoService>();
 
 // ---------- PASO 1: AÑADIR SERVICIO CORS ----------
 builder.Services.AddCors(options =>
@@ -22,6 +26,39 @@ builder.Services.AddCors(options =>
         });
 });
 // -----------------------------------------------------
+
+// ---------- 1. CONFIGURACIÓN DE SERVICIOS DE AUTENTICACIÓN Y AUTORIZACIÓN ----------
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["JwtSettings:Issuer"], // Lee el emisor desde appsettings
+
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["JwtSettings:Audience"], // Lee la audiencia desde appsettings
+
+        ValidateLifetime = true, // Verifica que el token no haya expirado
+
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!)), // Valida la firma usando la clave secreta
+
+        ClockSkew = TimeSpan.Zero // Elimina la tolerancia de tiempo en la expiración del token
+    };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    // Creamos una política llamada "Admin" que exige que el usuario tenga el rol "Admin".
+    // Este rol es el que pusimos en el token JWT.
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+});
+// ------------------------------------------------------------------------------------
 
 var app = builder.Build();
 
@@ -37,14 +74,21 @@ app.UseHttpsRedirection();
 // ---------- PASO 2: USAR MIDDLEWARE CORS ----------
 app.UseCors("AllowBlazorWasm");
 
-//  app.UseAuthorization();
 
+// ---------- 2. ACTIVACIÓN DE MIDDLEWARES DE AUTENTICACIÓN Y AUTORIZACIÓN ----------
+app.UseAuthentication();
+app.UseAuthorization();
+// ---------------------------------------------------------------------------------
+
+//  app.UseAuthorization();
 // app.MapControllers();
+
 // --------------------------------------------------
 
 // ---------- ORGANIZACIÓN DE ENDPOINTS ----------
 app.MapProductoEndpoints();
 app.MapUsuarioEndpoints();
+app.MapPedidoEndpoints();
 // -----------------------------------------------------------
 
 app.Run();

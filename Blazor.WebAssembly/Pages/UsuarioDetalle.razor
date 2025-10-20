@@ -1,84 +1,76 @@
 ﻿@page "/usuarios/nuevo"
 @page "/usuarios/editar/{Id:int}"
+@attribute [Authorize(Roles = "Admin")] // <-- ¡Protege toda la página!
+
 @inject HttpClient Http
-@inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <PageTitle>@(Id.HasValue ? "Editar Usuario" : "Nuevo Usuario")</PageTitle>
 
 <h3>@(Id.HasValue ? "Editar Usuario" : "Nuevo Usuario")</h3>
 
-@if (!AuthService.EsAdministrador)
-{
-    <div class="alert alert-danger">
-        No tiene permisos para realizar esta acción.
-    </div>
-    <button class="btn btn-secondary" @onclick="Cancelar">Volver</button>
-}
-else
-{
-    <div style="max-width: 500px;">
-        @if (usuario == null)
-        {
-            <p><em>Cargando...</em></p>
-        }
-        else
-        {
-            <EditForm Model="@usuario" OnValidSubmit="Aceptar">
-                <DataAnnotationsValidator />
+<div style="max-width: 500px;">
+    @if (usuario == null)
+    {
+        <p><em>Cargando...</em></p>
+    }
+    else
+    {
+        <EditForm Model="@usuario" OnValidSubmit="Aceptar">
+            <DataAnnotationsValidator />
 
-                @if (Id.HasValue)
-                {
-                    <div class="mb-3">
-                        <label class="form-label">ID:</label>
-                        <InputNumber @bind-Value="usuario.Id" class="form-control" disabled />
-                    </div>
-                }
-
+            @if (Id.HasValue)
+            {
                 <div class="mb-3">
-                    <label class="form-label">Nombre: *</label>
-                    <InputText @bind-Value="usuario.Nombre" class="form-control" />
-                    <ValidationMessage For="@(() => usuario.Nombre)" />
+                    <label class="form-label">ID:</label>
+                    <InputNumber @bind-Value="usuario.Id" class="form-control" disabled />
                 </div>
+            }
 
-                <div class="mb-3">
-                    <label class="form-label">Apellido: *</label>
-                    <InputText @bind-Value="usuario.Apellido" class="form-control" />
-                    <ValidationMessage For="@(() => usuario.Apellido)" />
+            <div class="mb-3">
+                <label class="form-label">Nombre: *</label>
+                <InputText @bind-Value="usuario.Nombre" class="form-control" />
+                <ValidationMessage For="@(() => usuario.Nombre)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Apellido: *</label>
+                <InputText @bind-Value="usuario.Apellido" class="form-control" />
+                <ValidationMessage For="@(() => usuario.Apellido)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Email: *</label>
+                <InputText type="email" @bind-Value="usuario.Email" class="form-control" />
+                <ValidationMessage For="@(() => usuario.Email)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Contraseña: *</label>
+                <InputText type="password" @bind-Value="usuario.Contrasena" class="form-control" placeholder="@(Id.HasValue ? "Dejar en blanco para no cambiar" : "")" />
+                <ValidationMessage For="@(() => usuario.Contrasena)" />
+            </div>
+
+            <div class="mb-3 form-check">
+                <InputCheckbox @bind-Value="usuario.EsAdmin" class="form-check-input" id="esAdmin" />
+                <label for="esAdmin" class="form-check-label">Es Administrador</label>
+            </div>
+
+            @if (errorMessage != null)
+            {
+                <div class="alert alert-danger">
+                    @errorMessage
                 </div>
+            }
 
-                <div class="mb-3">
-                    <label class="form-label">Email: *</label>
-                    <InputText type="email" @bind-Value="usuario.Email" class="form-control" />
-                    <ValidationMessage For="@(() => usuario.Email)" />
-                </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Aceptar</button>
+                <button type="button" class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </EditForm>
+    }
+</div>
 
-                <div class="mb-3">
-                    <label class="form-label">Contraseña: *</label>
-                    <InputText type="password" @bind-Value="usuario.Contrasena" class="form-control" placeholder="@(Id.HasValue ? "Dejar en blanco para no cambiar" : "")" />
-                    <ValidationMessage For="@(() => usuario.Contrasena)" />
-                </div>
-
-                <div class="mb-3 form-check">
-                    <InputCheckbox @bind-Value="usuario.EsAdmin" class="form-check-input" id="esAdmin" />
-                    <label for="esAdmin" class="form-check-label">Es Administrador</label>
-                </div>
-
-                @if (errorMessage != null)
-                {
-                    <div class="alert alert-danger">
-                        @errorMessage
-                    </div>
-                }
-
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-primary">Aceptar</button>
-                    <button type="button" class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
-                </div>
-            </EditForm>
-        }
-    </div>
-}
 
 @code {
     [Parameter]
@@ -89,16 +81,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        if (!AuthService.EsAdministrador)
-        {
-            return;
-        }
-
+        // El atributo [Authorize] ya se encargó de verificar que el usuario es Admin.
         if (Id.HasValue)
         {
             try
             {
-                usuario = await Http.GetFromJsonAsync<UsuarioDTO>($"usuarios/{Id}") ?? new UsuarioDTO();
+                usuario = await Http.GetFromJsonAsync<UsuarioDTO>($"usuarios/{Id}");
             }
             catch (Exception ex)
             {
@@ -113,33 +101,24 @@ else
 
     private async Task Aceptar()
     {
+        if (usuario is null) return;
+
         errorMessage = null;
 
-        // Validaciones básicas
-        if (string.IsNullOrWhiteSpace(usuario.Nombre))
+        // Validaciones básicas (se pueden mejorar con DataAnnotations en el DTO)
+        if (string.IsNullOrWhiteSpace(usuario.Nombre) || string.IsNullOrWhiteSpace(usuario.Apellido) || string.IsNullOrWhiteSpace(usuario.Email))
         {
-            errorMessage = "El nombre es obligatorio";
+            errorMessage = "Nombre, Apellido y Email son obligatorios.";
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(usuario.Apellido))
+        // Para un nuevo usuario, la contraseña es obligatoria
+        if (!Id.HasValue && string.IsNullOrWhiteSpace(usuario.Contrasena))
         {
-            errorMessage = "El apellido es obligatorio";
+            errorMessage = "La contraseña es obligatoria para nuevos usuarios.";
             return;
         }
-
-        if (string.IsNullOrWhiteSpace(usuario.Email))
-        {
-            errorMessage = "El email es obligatorio";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(usuario.Contrasena))
-        {
-            errorMessage = "La contraseña es obligatoria";
-            return;
-        }
-
+        
         try
         {
             HttpResponseMessage response;
@@ -154,6 +133,7 @@ else
                 // Agregar
                 response = await Http.PostAsJsonAsync("usuarios", usuario);
             }
+
             if (response.IsSuccessStatusCode)
             {
                 Navigation.NavigateTo("/usuarios");
