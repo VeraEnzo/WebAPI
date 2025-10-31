@@ -1,0 +1,232 @@
+﻿@page "/categorias"
+@attribute [Authorize(Roles = "Admin")] // Protegido para Administradores
+@implements IDisposable
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Gestión de Categorías</PageTitle>
+
+<h1>Gestión de Categorías</h1>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <button class="btn btn-success" @onclick="AgregarCategoria">Agregar Nueva Categoría</button>
+    </div>
+    <div class="col-md-6">
+        <input type="text" class="form-control" placeholder="Buscar por nombre o descripción..."
+               @bind="TextoBusqueda" @bind:event="oninput" />
+        </div>
+</div>
+
+@if (listaCategorias == null)
+{
+    <p><em>Cargando categorías...</em></p>
+}
+else if (!listaCategorias.Any())
+{
+    <p><em>No hay categorías disponibles @(string.IsNullOrWhiteSpace(TextoBusqueda) ? "" : "que coincidan con la búsqueda.").</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Activa</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var cat in listaCategorias)
+            {
+                <tr>
+                    <td>@cat.Id</td>
+                    <td>@cat.Nombre</td>
+                    <td>@cat.Descripcion</td>
+                    <td>@(cat.Activo ? "Sí" : "No")</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="() => ModificarCategoria(cat)">Modificar</button>
+                        @if (cat.Activo)
+                        {
+                            <button class="btn btn-sm btn-warning" @onclick="() => EliminarCategoria(cat)">Desactivar</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm btn-info" @onclick="() => ActivarCategoria(cat)">Activar</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger mt-3">@errorMessage</div>
+}
+
+@if (mostrarConfirmacion)
+{
+    <div class="modal" style="display: block; background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar desactivación</h5>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro de desactivar la categoría '@categoriaAEliminar?.Nombre'?</p>
+                    <small>Los productos asociados no se verán afectados, pero la categoría no estará disponible para nuevos productos.</small>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelarEliminacion">Cancelar</button>
+                    <button class="btn btn-warning" @onclick="ConfirmarEliminacion">Desactivar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<CategoriaDTO>? listaCategorias; // Lista que se muestra en la tabla
+    private string? errorMessage;
+    private bool mostrarConfirmacion = false;
+    private CategoriaDTO? categoriaAEliminar;
+    private Timer? debounceTimer;
+
+    // --- textoBusqueda AHORA ES UNA PROPIEDAD ---
+    private string _textoBusqueda = "";
+    private string TextoBusqueda
+    {
+        get => _textoBusqueda;
+        set
+        {
+            if (_textoBusqueda != value)
+            {
+                _textoBusqueda = value;
+                // Reiniciar el timer cada vez que el texto cambia (en el setter)
+                debounceTimer?.Change(500, Timeout.Infinite);
+            }
+        }
+    }
+    // ------------------------------------------
+
+    protected override async Task OnInitializedAsync()
+    {
+        // El timer ahora llama directamente a CargarCategorias de forma asíncrona
+        debounceTimer = new Timer(async _ => await InvokeAsync(CargarCategorias), null, Timeout.Infinite, Timeout.Infinite);
+        await CargarCategorias(); // Carga inicial
+    }
+
+    private async Task CargarCategorias()
+    {
+        errorMessage = null; // Limpiar errores previos
+        listaCategorias = null; // Mostrar "Cargando..."
+        // Usamos InvokeAsync porque el timer puede llamar a esto desde otro hilo
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            string url = "categorias";
+            // Usamos la propiedad TextoBusqueda
+            if (!string.IsNullOrWhiteSpace(TextoBusqueda))
+            {
+                url = $"categorias/buscar?texto={Uri.EscapeDataString(TextoBusqueda)}";
+            }
+
+            listaCategorias = await Http.GetFromJsonAsync<List<CategoriaDTO>>(url);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar categorías: {ex.Message}";
+            listaCategorias = new List<CategoriaDTO>(); // Evitar nulls
+        }
+        // Usamos InvokeAsync porque el timer puede llamar a esto desde otro hilo
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // --- SE ELIMINÓ EL MÉTODO BuscarCategorias(ChangeEventArgs e) ---
+
+    private void AgregarCategoria()
+    {
+        Navigation.NavigateTo("/categorias/nuevo");
+    }
+
+    private void ModificarCategoria(CategoriaDTO categoria)
+    {
+        Navigation.NavigateTo($"/categorias/editar/{categoria.Id}");
+    }
+
+    private void EliminarCategoria(CategoriaDTO categoria)
+    {
+        categoriaAEliminar = categoria;
+        mostrarConfirmacion = true;
+    }
+
+    private void CancelarEliminacion()
+    {
+        categoriaAEliminar = null;
+        mostrarConfirmacion = false;
+    }
+
+    private async Task ConfirmarEliminacion()
+    {
+        if (categoriaAEliminar != null)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"categorias/{categoriaAEliminar.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    await CargarCategorias(); // Recargar la lista
+                }
+                else
+                {
+                    errorMessage = "Error al desactivar la categoría.";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                mostrarConfirmacion = false;
+                categoriaAEliminar = null;
+            }
+        }
+    }
+
+    private async Task ActivarCategoria(CategoriaDTO categoria)
+    {
+        errorMessage = null;
+        try
+        {
+            categoria.Activo = true;
+            var response = await Http.PutAsJsonAsync("categorias", categoria);
+            if (response.IsSuccessStatusCode)
+            {
+                await CargarCategorias();
+            }
+            else
+            {
+                 var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                 errorMessage = error?["error"] ?? "Error al activar la categoría.";
+                 categoria.Activo = false;
+            }
+        }
+        catch(Exception ex)
+        {
+            errorMessage = $"Error al activar: {ex.Message}";
+            categoria.Activo = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+}

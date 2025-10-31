@@ -1,0 +1,150 @@
+﻿@page "/categorias/nuevo"
+@page "/categorias/editar/{Id:int}"
+@attribute [Authorize(Roles = "Admin")]
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>@(Id.HasValue ? "Editar Categoría" : "Nueva Categoría")</PageTitle>
+
+<h3>@(Id.HasValue ? "Editar Categoría" : "Nueva Categoría")</h3>
+
+@if (categoria == null && Id.HasValue) // Muestra cargando solo si está editando
+{
+    <p><em>Cargando...</em></p>
+}
+else if (categoria != null) // Asegurarse de que categoria no sea null para el formulario
+{
+    <div style="max-width: 500px;">
+        <EditForm Model="@categoria" OnValidSubmit="Aceptar">
+            <DataAnnotationsValidator />
+
+            @if (Id.HasValue)
+            {
+                <div class="mb-3">
+                    <label class="form-label">ID:</label>
+                    <InputNumber @bind-Value="categoria.Id" class="form-control" disabled />
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label">Nombre: *</label>
+                <InputText @bind-Value="categoria.Nombre" class="form-control" />
+                <ValidationMessage For="@(() => categoria.Nombre)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Descripción:</label>
+                <InputTextArea @bind-Value="categoria.Descripcion" class="form-control" rows="3" />
+                <ValidationMessage For="@(() => categoria.Descripcion)" />
+            </div>
+            @if (Id.HasValue) // Solo mostrar al editar, no al crear (siempre se crea activa)
+            {
+                <div class="mb-3 form-check">
+                    <InputCheckbox @bind-Value="categoria.Activo" class="form-check-input" id="activoCheck" />
+                    <label class="form-check-label" for="activoCheck">Activa</label>
+                </div>
+            }
+            @if (errorMessage != null)
+            {
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
+            }
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">Aceptar</button>
+                <button type="button" class="btn btn-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    // Asegurarse de inicializar para evitar null reference en el EditForm
+    private CategoriaDTO categoria = new();
+    private string? errorMessage;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue)
+        {
+            try
+            {
+                categoria = await Http.GetFromJsonAsync<CategoriaDTO>($"categorias/{Id}") ?? new CategoriaDTO { Id = Id.Value }; // Usar ?? new() para asegurar que no sea null
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al cargar la categoría: {ex.Message}";
+                categoria = new CategoriaDTO { Id = Id.Value }; // Inicializar en caso de error
+            }
+        }
+        else
+        {
+            categoria = new CategoriaDTO(); // Para una nueva categoría
+        }
+    }
+
+    private async Task Aceptar()
+    {
+        errorMessage = null;
+        isSubmitting = true;
+
+        // Validaciones básicas (se pueden mejorar con DataAnnotations en CategoriaDTO)
+        if (string.IsNullOrWhiteSpace(categoria.Nombre))
+        {
+            errorMessage = "El nombre es obligatorio.";
+            isSubmitting = false;
+            return;
+        }
+
+        try
+        {
+            HttpResponseMessage response;
+            if (Id.HasValue)
+            {
+                // Al editar, aseguramos que el DTO incluya el estado 'Activo'
+                response = await Http.PutAsJsonAsync("categorias", categoria);
+            }
+            else
+            {
+                // Al crear, la API/Servicio se encargará de ponerla activa por defecto
+                response = await Http.PostAsJsonAsync("categorias", categoria);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/categorias");
+            }
+            else
+            {
+                try
+                {
+                    var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                    errorMessage = error?["error"] ?? $"Error {response.StatusCode} al guardar la categoría.";
+                }
+                catch
+                {
+                    errorMessage = $"Error {response.StatusCode} al guardar la categoría.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("/categorias");
+    }
+}

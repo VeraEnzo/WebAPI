@@ -32,8 +32,10 @@
             modificarButton = new Button();
             eliminarButton = new Button();
             agregarButton = new Button();
-            usuariosButton = new Button();
+            cantidadNumericUpDown = new NumericUpDown();
+            agregarAlCarritoButton = new Button();
             ((System.ComponentModel.ISupportInitialize)productosDataGridView).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)cantidadNumericUpDown).BeginInit();
             SuspendLayout();
             // 
             // productosDataGridView
@@ -82,23 +84,30 @@
             agregarButton.UseVisualStyleBackColor = true;
             agregarButton.Click += agregarButton_Click;
             // 
-            // usuariosButton
+            // cantidadNumericUpDown
             // 
-            usuariosButton.Location = new Point(426, 343);
-            usuariosButton.Margin = new Padding(2, 1, 2, 1);
-            usuariosButton.Name = "usuariosButton";
-            usuariosButton.Size = new Size(81, 22);
-            usuariosButton.TabIndex = 7;
-            usuariosButton.Text = "Usuarios";
-            usuariosButton.UseVisualStyleBackColor = true;
-            usuariosButton.Click += usuariosButton_Click;
+            cantidadNumericUpDown.Location = new Point(20, 342);
+            cantidadNumericUpDown.Name = "cantidadNumericUpDown";
+            cantidadNumericUpDown.Size = new Size(120, 23);
+            cantidadNumericUpDown.TabIndex = 7;
+            // 
+            // agregarAlCarritoButton
+            // 
+            agregarAlCarritoButton.Location = new Point(146, 342);
+            agregarAlCarritoButton.Name = "agregarAlCarritoButton";
+            agregarAlCarritoButton.Size = new Size(114, 23);
+            agregarAlCarritoButton.TabIndex = 8;
+            agregarAlCarritoButton.Text = "Agregar al pedido";
+            agregarAlCarritoButton.UseVisualStyleBackColor = true;
+            agregarAlCarritoButton.Click += agregarAlCarritoButton_Click;
             // 
             // ProductoLista
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
-            Controls.Add(usuariosButton);
+            Controls.Add(agregarAlCarritoButton);
+            Controls.Add(cantidadNumericUpDown);
             Controls.Add(modificarButton);
             Controls.Add(eliminarButton);
             Controls.Add(agregarButton);
@@ -107,6 +116,7 @@
             Text = "Form1";
             Load += ProductoLista_Load;
             ((System.ComponentModel.ISupportInitialize)productosDataGridView).EndInit();
+            ((System.ComponentModel.ISupportInitialize)cantidadNumericUpDown).EndInit();
             ResumeLayout(false);
         }
 
@@ -116,6 +126,7 @@
         private Button modificarButton;
         private Button eliminarButton;
         private Button agregarButton;
-        private Button usuariosButton;
+        private NumericUpDown cantidadNumericUpDown;
+        private Button agregarAlCarritoButton;
     }
 }

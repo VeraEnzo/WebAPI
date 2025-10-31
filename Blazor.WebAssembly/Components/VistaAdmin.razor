@@ -1,5 +1,6 @@
 ﻿@inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <h4>Todos los Pedidos (Vista de Administrador)</h4>
 
@@ -9,6 +10,11 @@
     </div>
     <div class="col-md-4">
         <input type="text" class="form-control" placeholder="Filtrar por Nombre de Usuario..." @oninput="FiltrarPorNombre" />
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-info" @onclick="GenerarPDF">
+            <span class="bi bi-file-earmark-pdf-fill"></span> Exportar a PDF
+        </button>
     </div>
 </div>
 
@@ -115,5 +121,39 @@ else
     private void VerDetalle(int pedidoId)
     {
         Navigation.NavigateTo($"/pedidos/{pedidoId}");
+    }
+
+    private async Task GenerarPDF()
+    {
+        if (pedidosFiltrados == null || !pedidosFiltrados.Any())
+        {
+            // Opcional: mostrar un mensaje si no hay datos para exportar
+            return;
+        }
+
+        var titulo = "Reporte de Todos los Pedidos";
+
+        // Definir las columnas
+        var columnas = new[] { "ID Pedido", "Fecha", "Usuario", "Cant. Items", "Total" };
+
+        // Convertir la lista de pedidos filtrados a un formato que jsPDF entienda (array de arrays)
+        var filas = pedidosFiltrados.Select(pedido => new object[]
+        {
+            pedido.Id.ToString(),
+            pedido.FechaPedido.ToLocalTime().ToString("dd/MM/yyyy"),
+            pedido.NombreUsuario,
+            pedido.CantidadItems.ToString(),
+            pedido.Total.ToString("C") // Formateado como moneda
+        }).ToArray();
+
+        try
+        {
+            // Llamar a la función de JavaScript que creamos en pdfUtils.js
+            await JSRuntime.InvokeVoidAsync("generarPDFPedidos", titulo, columnas, filas);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al generar el PDF: {ex.Message}";
+        }
     }
 }

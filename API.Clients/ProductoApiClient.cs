@@ -1,5 +1,6 @@
 ﻿using DTOs;
 using System;
+using System.Collections.Generic; // <-- Añadido por si faltaba
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -18,13 +19,24 @@ namespace API.Clients
             handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
 
             client = new HttpClient(handler);
-            client.BaseAddress = new Uri("https://localhost:7153");
+            client.BaseAddress = new Uri("https://localhost:7153"); // Asegúrate que sea tu URL
         }
+
+        // --- MÉTODO NUEVO PARA AÑADIR EL TOKEN ---
+        // Este método será llamado por el GestorDeSesion
+        public static void ConfigurarToken(string? token)
+        {
+            client.DefaultRequestHeaders.Authorization = string.IsNullOrEmpty(token)
+                ? null
+                : new AuthenticationHeaderValue("Bearer", token);
+        }
+        // ----------------------------------------
 
         public static async Task<ProductoDTO> GetAsync(int id)
         {
             try
             {
+                // Esta llamada ahora incluirá el token automáticamente
                 HttpResponseMessage response = await client.GetAsync("productos/" + id);
 
                 if (response.IsSuccessStatusCode)

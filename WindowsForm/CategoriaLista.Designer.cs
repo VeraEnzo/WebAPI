@@ -1,9 +1,9 @@
 ﻿namespace WindowsForms
 {
-    partial class UsuarioLista
+    partial class CategoriaLista
     {
         private System.ComponentModel.IContainer components = null;
-        private System.Windows.Forms.DataGridView usuariosDataGridView;
+        private System.Windows.Forms.DataGridView categoriasDataGridView;
         private System.Windows.Forms.Button agregarButton;
         private System.Windows.Forms.Button modificarButton;
         private System.Windows.Forms.Button eliminarButton;
@@ -20,26 +20,26 @@
         #region Windows Form Designer generated code
         private void InitializeComponent()
         {
-            this.usuariosDataGridView = new System.Windows.Forms.DataGridView();
+            this.categoriasDataGridView = new System.Windows.Forms.DataGridView();
             this.agregarButton = new System.Windows.Forms.Button();
             this.modificarButton = new System.Windows.Forms.Button();
             this.eliminarButton = new System.Windows.Forms.Button();
-            ((System.ComponentModel.ISupportInitialize)(this.usuariosDataGridView)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.categoriasDataGridView)).BeginInit();
             this.SuspendLayout();
             // 
-            // usuariosDataGridView
+            // categoriasDataGridView
             // 
-            this.usuariosDataGridView.AllowUserToAddRows = false;
-            this.usuariosDataGridView.AllowUserToDeleteRows = false;
-            this.usuariosDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.usuariosDataGridView.Location = new System.Drawing.Point(12, 12);
-            this.usuariosDataGridView.MultiSelect = false;
-            this.usuariosDataGridView.Name = "usuariosDataGridView";
-            this.usuariosDataGridView.ReadOnly = true;
-            this.usuariosDataGridView.RowTemplate.Height = 25;
-            this.usuariosDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.usuariosDataGridView.Size = new System.Drawing.Size(776, 380);
-            this.usuariosDataGridView.TabIndex = 0;
+            this.categoriasDataGridView.AllowUserToAddRows = false;
+            this.categoriasDataGridView.AllowUserToDeleteRows = false;
+            this.categoriasDataGridView.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.categoriasDataGridView.Location = new System.Drawing.Point(12, 12);
+            this.categoriasDataGridView.MultiSelect = false;
+            this.categoriasDataGridView.Name = "categoriasDataGridView";
+            this.categoriasDataGridView.ReadOnly = true;
+            this.categoriasDataGridView.RowTemplate.Height = 25;
+            this.categoriasDataGridView.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.categoriasDataGridView.Size = new System.Drawing.Size(776, 380);
+            this.categoriasDataGridView.TabIndex = 0;
             // 
             // agregarButton
             // 
@@ -67,11 +67,11 @@
             this.eliminarButton.Name = "eliminarButton";
             this.eliminarButton.Size = new System.Drawing.Size(75, 23);
             this.eliminarButton.TabIndex = 3;
-            this.eliminarButton.Text = "Eliminar";
+            this.eliminarButton.Text = "Desactivar"; // Cambiamos el texto
             this.eliminarButton.UseVisualStyleBackColor = true;
             this.eliminarButton.Click += new System.EventHandler(this.eliminarButton_Click);
             // 
-            // UsuarioLista
+            // CategoriaLista
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -79,11 +79,11 @@
             this.Controls.Add(this.eliminarButton);
             this.Controls.Add(this.modificarButton);
             this.Controls.Add(this.agregarButton);
-            this.Controls.Add(this.usuariosDataGridView);
-            this.Name = "UsuarioLista";
-            this.Text = "Lista de Usuarios";
-            this.Load += new System.EventHandler(this.UsuarioLista_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.usuariosDataGridView)).EndInit();
+            this.Controls.Add(this.categoriasDataGridView);
+            this.Name = "CategoriaLista";
+            this.Text = "Gestión de Categorías";
+            this.Load += new System.EventHandler(this.CategoriaLista_Load);
+            ((System.ComponentModel.ISupportInitialize)(this.categoriasDataGridView)).EndInit();
             this.ResumeLayout(false);
         }
         #endregion

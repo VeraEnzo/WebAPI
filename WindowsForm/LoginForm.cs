@@ -1,13 +1,6 @@
 ﻿using API.Clients;
 using DTOs;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace WindowsForms
@@ -23,7 +16,6 @@ namespace WindowsForms
         {
             string email = emailTextBox.Text.Trim();
             string contrasena = contrasenaTextBox.Text.Trim();
-            bool requiereAdmin = adminCheckBox.Checked;
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(contrasena))
             {
@@ -33,21 +25,25 @@ namespace WindowsForms
 
             try
             {
-                var usuario = await UsuarioApiClient.ValidateAsync(email, contrasena);
+                // 1. Llamamos al nuevo método de login que devuelve el token
+                var token = await UsuarioApiClient.LoginAsync(email, contrasena);
 
-                if (usuario != null)
+                if (token != null)
                 {
-                    if (requiereAdmin && !usuario.EsAdmin)
-                    {
-                        MessageBox.Show("El usuario no tiene permisos de administrador.", "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
+                    // 2. Iniciamos la sesión global
+                    GestorDeSesion.IniciarSesion(token);
 
-                    MessageBox.Show($"Bienvenido, {usuario.Nombre}!", "Login exitoso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"Bienvenido, {GestorDeSesion.NombreUsuario}!", "Login exitoso", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    var formPrincipal = new ProductoLista(false, usuario.EsAdmin);
-                    this.Hide();
-                    formPrincipal.ShowDialog();
+                    // 3. Abrimos el formulario principal
+                    // var formPrincipal = new MainForm();
+                    // this.Hide();
+                    // formPrincipal.ShowDialog();
+                    // this.Close();
+
+                    // 1. Avisamos que el login fue exitoso
+                    this.DialogResult = DialogResult.OK;
+                    // 2. Cerramos el formulario de login (pero no la aplicación)
                     this.Close();
                 }
                 else
@@ -57,16 +53,16 @@ namespace WindowsForms
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Ocurrió un error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Ocurrió un error al conectar con el servidor: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void invitadoButton_Click(object sender, EventArgs e)
+        private void registrarButton_Click(object sender, EventArgs e)
         {
-            var formProductos = new ProductoLista(true); // true indica modo invitado
-            this.Hide();
-            formProductos.ShowDialog();
-            this.Close();
+            // Creamos y mostramos el nuevo formulario de registro
+            var formRegistro = new RegistroForm();
+            formRegistro.ShowDialog();
+            // No cerramos el login, el usuario vuelve aquí después de registrarse
         }
     }
 }

@@ -1,5 +1,8 @@
 ﻿using DTOs;
+using System;
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Net.Http.Headers; // <-- Importante
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 
@@ -18,81 +21,85 @@ namespace API.Clients
             client.BaseAddress = new Uri("https://localhost:7153");
         }
 
-        public static async Task<UsuarioDTO> ValidateAsync(string email, string contrasena)
+        // --- MÉTODO NUEVO PARA AÑADIR EL TOKEN ---
+        public static void ConfigurarToken(string? token)
+        {
+            client.DefaultRequestHeaders.Authorization = string.IsNullOrEmpty(token)
+                ? null
+                : new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        // Clase auxiliar para leer la respuesta del login
+        private class LoginResponse { public string Token { get; set; } = ""; }
+
+        // --- MÉTODO DE LOGIN MODIFICADO (YA NO SE LLAMA VALIDATEASYNC) ---
+        public static async Task<string?> LoginAsync(string email, string contrasena)
         {
             try
             {
-                var loginData = new
-                {
-                    Email = email,
-                    Contrasena = contrasena
-                };
-
+                var loginData = new UsuarioLoginDTO { Email = email, Contrasena = contrasena };
                 HttpResponseMessage response = await client.PostAsJsonAsync("/usuarios/login", loginData);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var usuario = await response.Content.ReadFromJsonAsync<UsuarioDTO>();
-                    return usuario ?? throw new Exception("Error inesperado: respuesta vacía del servidor.");
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    return null; // Credenciales inválidas
+                    var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                    return loginResponse?.Token; // Devuelve el string del token
                 }
                 else
                 {
-                    string errorContent = await response.Content.ReadAsStringAsync();
-                    throw new Exception($"Error en login. Status: {response.StatusCode}, Detalle: {errorContent}");
+                    return null; // Credenciales inválidas o error
                 }
             }
-            catch (HttpRequestException ex)
+            catch (Exception ex)
             {
-                throw new Exception("Error de conexión al servidor de autenticación: " + ex.Message, ex);
+                Console.WriteLine(ex.Message); // Loguear el error
+                return null;
             }
         }
 
+        // --- MÉTODO NUEVO PARA REGISTRO PÚBLICO ---
+        public static async Task<UsuarioDTO?> RegistroAsync(UsuarioDTO nuevoUsuario)
+        {
+            var response = await client.PostAsJsonAsync("/usuarios/registro", nuevoUsuario);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<UsuarioDTO>();
+            }
+            else
+            {
+                // Leer el mensaje de error de la API (ej. email duplicado)
+                var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                throw new Exception(error?["error"] ?? "Error al registrarse.");
+            }
+        }
+
+        // --- MÉTODOS CRUD (Ahora funcionarán porque el token se añade en ConfigurarToken) ---
+
         public static async Task<UsuarioDTO> GetAsync(int id)
         {
-            try
-            {
-                return await client.GetFromJsonAsync<UsuarioDTO>("usuarios/" + id);
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Error de conexión al obtener usuario con Id {id}: {ex.Message}", ex);
-            }
+            return await client.GetFromJsonAsync<UsuarioDTO>("usuarios/" + id);
         }
 
         public static async Task<List<UsuarioDTO>> GetAllAsync()
         {
-            try
+            var response = await client.GetAsync("/usuarios");
+            if (response.IsSuccessStatusCode)
             {
-                var response = await client.GetAsync("/usuarios");
-                if (response.IsSuccessStatusCode)
-                {
-                    var usuarios = await response.Content.ReadFromJsonAsync<List<UsuarioDTO>>();
-                    return usuarios ?? new List<UsuarioDTO>();
-                }
-                else
-                {
-                    string error = await response.Content.ReadAsStringAsync();
-                    throw new Exception($"Error al obtener usuarios: {response.StatusCode} - {error}");
-                }
+                var usuarios = await response.Content.ReadFromJsonAsync<List<UsuarioDTO>>();
+                return usuarios ?? new List<UsuarioDTO>();
             }
-            catch (HttpRequestException ex)
+            else
             {
-                throw new Exception("Error de conexión al servidor: " + ex.Message);
+                string error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Error al obtener usuarios: {response.StatusCode} - {error}");
             }
         }
-
-        // --- INICIO DE CÓDIGO NUEVO ---
 
         public static async Task<UsuarioDTO> AddAsync(UsuarioDTO usuario)
         {
             var response = await client.PostAsJsonAsync("/usuarios", usuario);
             if (response.IsSuccessStatusCode)
             {
-                // La API devuelve el usuario creado (con su nuevo ID)
                 return await response.Content.ReadFromJsonAsync<UsuarioDTO>();
             }
             else
@@ -105,17 +112,13 @@ namespace API.Clients
         public static async Task<bool> UpdateAsync(UsuarioDTO usuario)
         {
             var response = await client.PutAsJsonAsync("/usuarios", usuario);
-            // Devuelve true si la respuesta fue exitosa (ej. 204 No Content), false si no.
             return response.IsSuccessStatusCode;
         }
 
         public static async Task<bool> DeleteAsync(int id)
         {
             var response = await client.DeleteAsync($"/usuarios/{id}");
-            // Devuelve true si la respuesta fue exitosa (ej. 204 No Content), false si no.
             return response.IsSuccessStatusCode;
         }
-
-        // --- FIN DE CÓDIGO NUEVO ---
     }
 }

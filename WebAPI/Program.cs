@@ -13,6 +13,7 @@ builder.Services.AddHttpLogging(o => { });
 builder.Services.AddScoped<ProductoService>();
 builder.Services.AddScoped<UsuarioService>();
 builder.Services.AddScoped<PedidoService>();
+builder.Services.AddScoped<CategoriaService>();
 
 // ---------- PASO 1: AÑADIR SERVICIO CORS ----------
 builder.Services.AddCors(options =>
@@ -89,6 +90,7 @@ app.UseAuthorization();
 app.MapProductoEndpoints();
 app.MapUsuarioEndpoints();
 app.MapPedidoEndpoints();
+app.MapCategoriaEndpoints();
 // -----------------------------------------------------------
 
 app.Run();
