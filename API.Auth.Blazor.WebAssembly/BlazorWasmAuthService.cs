@@ -3,7 +3,7 @@ using Microsoft.JSInterop;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Blazor.WebAssembly;
 
@@ -31,11 +31,39 @@ public class BlazorWasmAuthService : IAuthService
     {
         try
         {
-            return await _jsRuntime.InvokeAsync<string>("localStorage.getItem", TOKEN_KEY);
+            var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", TOKEN_KEY);
+
+            // Validar si el token ha expirado
+            if (!string.IsNullOrEmpty(token) && IsTokenExpired(token))
+            {
+                // Token expirado, eliminarlo automáticamente
+                await LogoutAsync();
+                return null;
+            }
+
+            return token;
         }
         catch
         {
             return null;
+        }
+    }
+
+    private bool IsTokenExpired(string token)
+    {
+        try
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+
+            // Verificar si el token ha expirado
+            // ValidTo ya está en UTC, comparamos con DateTime.UtcNow
+            return jwtToken.ValidTo < DateTime.UtcNow;
+        }
+        catch
+        {
+            // Si hay algún error al leer el token, considerarlo expirado
+            return true;
         }
     }
 

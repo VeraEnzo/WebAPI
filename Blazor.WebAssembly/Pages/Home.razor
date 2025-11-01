@@ -1,12 +1,13 @@
 ﻿@page "/"
-@using Microsoft.AspNetCore.Components
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
-@if (loginSuccess)
+@if (mostrarMensaje)
 {
-    <div class="alert alert-success" role="alert">
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
         ¡Inicio de sesión exitoso!
+        <button type="button" class="btn-close" @onclick="OcultarMensaje"></button>
     </div>
 }
 
@@ -32,4 +33,27 @@
 @code {
     [SupplyParameterFromQuery]
     public bool loginSuccess { get; set; }
+
+    private bool mostrarMensaje = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (loginSuccess)
+        {
+            mostrarMensaje = true;
+
+            // Limpiar la URL inmediatamente
+            Navigation.NavigateTo("/", replace: true);
+
+            // Ocultar el mensaje después de 3 segundos
+            await Task.Delay(3000);
+            mostrarMensaje = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OcultarMensaje()
+    {
+        mostrarMensaje = false;
+    }
 }
